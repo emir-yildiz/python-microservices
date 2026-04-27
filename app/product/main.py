@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import asyncio
 import asyncpg
 from dependencies.dependencies import set_pool
 from routers import product_router
@@ -13,12 +14,22 @@ settings = Settings()
 setup_logging(level=settings.log_level)
 logger = get_logger(__name__)
 
+async def periodic_health_check(pool, interval: int = 30):  # ← pool parametre olarak alındı
+    while True:
+        try:
+            await pool.fetchval("SELECT 1")
+            logger.info("Health check: ok")
+        except Exception as e:
+            logger.error("Health check failed: %s", e)
+        await asyncio.sleep(interval)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Uygulama başlarken
     logger.info(f"Uygulama başlatıldı")
     pool = await asyncpg.create_pool(dsn=settings.database_url,min_size=2,max_size=10)
     set_pool(pool)
+    task = asyncio.create_task(periodic_health_check(pool, interval=settings.health_check_interval))  # ← pool geçildi
     yield
     # Uygulama kapanırken
     await pool.close()

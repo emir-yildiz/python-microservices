@@ -6,5 +6,6 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     app_port: int = 8001
     api_key: str
+    health_check_interval: int
 
     model_config = {"env_file": ".env"}
