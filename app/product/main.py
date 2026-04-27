@@ -7,17 +7,22 @@ from config import Settings
 from exceptions.product_exception import ProductNotFoundException,ProductAlreadyExistsException
 from fastapi import Request
 from fastapi.responses import JSONResponse
+from core.logging import setup_logging,get_logger
 
 settings = Settings()
+setup_logging(level=settings.log_level)
+logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Uygulama başlarken
+    logger.info(f"Uygulama başlatıldı")
     pool = await asyncpg.create_pool(dsn=settings.database_url,min_size=2,max_size=10)
     set_pool(pool)
     yield
     # Uygulama kapanırken
     await pool.close()
+    logger.info(f"Uygulama kapatılıyor")
 
 
 app = FastAPI(lifespan=lifespan)
